@@ -29,8 +29,6 @@ class Ephemeris:
         
         ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
 
-        return ["Moon Trajectory", "Moon"]
-
 def plot_earth(*, ax, label):
     u = np.linspace(0, np.pi, 30)
     v = np.linspace(0, 2 * np.pi, 30)
@@ -40,7 +38,6 @@ def plot_earth(*, ax, label):
     z = r_earth * np.outer(np.cos(u), np.ones_like(v))
 
     ax.plot_surface(x, y, z, color="blue", label=label)
-    return ["Earth"]
 
 def earth_dynamics(time, state):
     """
