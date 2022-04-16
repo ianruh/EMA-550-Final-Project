@@ -1,12 +1,14 @@
 import numpy as np
-from .constants import mu_earth
+from .constants import *
 
 def make_coe(*,e,a,i,raan,arg_peri,true_anom):
     return np.array([e,a,i,raan,arg_peri,true_anom], dtype=np.double)
 def make_pv(*,x,y,z,vx,vy,vz):
     return np.array([x, y, z, vx, vy, vz], dtype=np.double)
 
-def pv_to_moe(*, pv: np.ndarray) -> np.ndarray:
+def pv_to_moe(*,
+        pv: np.ndarray,
+        central_body: CentralBody = EARTH) -> np.ndarray:
     """Convert position-velocity to modified orbital elements.
 
     pv:  [x, y, z, vx, vy, vz] (meters, meters/second)
@@ -26,7 +28,7 @@ def pv_to_moe(*, pv: np.ndarray) -> np.ndarray:
     z_vec = np.array([0, 0, 1])
     n_vec = np.cross(z_vec, h_vec)
     n = np.linalg.norm(n_vec)
-    e_vec = (v**2/mu_earth - 1/r)*r_vec - (np.dot(r_vec, v_vec)/mu_earth)*v_vec
+    e_vec = (v**2/central_body.mu - 1/r)*r_vec - (np.dot(r_vec, v_vec)/central_body.mu)*v_vec
     e = np.linalg.norm(e_vec)
 
     # Orbital elements
@@ -44,11 +46,13 @@ def pv_to_moe(*, pv: np.ndarray) -> np.ndarray:
     if(v_r < 0):
         f = 2*np.pi - f
 
-    a = h**2 / (mu_earth*(1 - e**2))
+    a = h**2 / (central_body.mu*(1 - e**2))
 
     return np.array([e, a, i, Omega, omega, f])
 
-def pv_from_moe(*, moe: np.ndarray) -> np.ndarray:
+def pv_from_moe(*,
+        moe: np.ndarray,
+        central_body: CentralBody = EARTH) -> np.ndarray:
     """Convert modified orbital elements to position-velocity.
 
     pv:  [x, y, z, vx, vy, vz] (meters, meters/second)
@@ -70,8 +74,8 @@ def pv_from_moe(*, moe: np.ndarray) -> np.ndarray:
     ])
 
     v_pqw_vec = np.array([
-        -1*np.sqrt(mu_earth/(a*(1 - e**2))) * np.sin(f),
-        np.sqrt(mu_earth/(a*(1-e**2))) * (e + np.cos(f)),
+        -1*np.sqrt(central_body.mu/(a*(1 - e**2))) * np.sin(f),
+        np.sqrt(central_body.mu/(a*(1-e**2))) * (e + np.cos(f)),
         0.0
     ])
 
@@ -97,6 +101,58 @@ def pv_from_moe(*, moe: np.ndarray) -> np.ndarray:
     v_eci_vec = (T3@T2@T1@v_pqw_vec.T).T
 
     return np.hstack((r_eci_vec, v_eci_vec))
+
+def pv_to_altitude(*,
+        pv: np.ndarray,
+        central_body: CentralBody):
+    """Get the alitiude of the given PV vector realtive to the central body"""
+    return np.linalg.norm(pv[:3]) - central_body.radius
+
+def pv_to_perigee_radius(*,
+        pv: np.ndarray,
+        central_body: CentralBody):
+    """Get the perigee radius from the pv vector"""
+    moe = pv_to_moe(pv=pv, central_body=central_body)
+    return moe[1]*(1-moe[0])
+
+def pv_to_apogee_radius(*,
+        pv: np.ndarray,
+        central_body: CentralBody):
+    """Get the apogee radius from the pv vector"""
+    moe = pv_to_moe(pv=pv, central_body=central_body)
+    return moe[1]*(1+moe[0])
+
+def pv_to_lunar_pv(*,
+        pv: np.ndarray,
+        t: float,
+        moon_ephemeris) -> np.ndarray:
+    """Convert an ECI PV vector to a lunar PV vector at the given time."""
+    eci_pos = pv[:3]
+    eci_vel = pv[3:]
+    moon_eci_pv = moon_ephemeris.get_pv(t=t)
+    moon_eci_pos = moon_eci_pv[:3]
+    moon_eci_vel = moon_eci_pv[3:]
+    
+    lunar_pos = (MOON_FRAME_ROTATION_INV @ (eci_pos - moon_eci_pos).reshape((3,1))).reshape((3))
+    lunar_vel = (MOON_FRAME_ROTATION_INV @ (eci_vel - moon_eci_vel).reshape((3,1))).reshape((3))
+
+    return np.hstack((lunar_pos, lunar_vel))
+
+def pv_from_lunar_pv(*,
+        lunar_pv: np.ndarray,
+        t: float,
+        moon_ephemeris) -> np.ndarray:
+    """Convert a lunar PV vector to an ECI PV vector at the given time."""
+    lunar_pos = lunar_pv[:3]
+    lunar_vel = lunar_pv[3:]
+    moon_eci_pv = moon_ephemeris.get_pv(t=t)
+    moon_eci_pos = moon_eci_pv[:3]
+    moon_eci_vel = moon_eci_pv[3:]
+    
+    eci_pos = MOON_FRAME_ROTATION @ lunar_pos.reshape((3,1)).reshape(3) + moon_eci_pos
+    eci_vel = MOON_FRAME_ROTATION @ lunar_vel.reshape((3,1)).reshape(3) + moon_eci_vel
+
+    return np.hstack((eci_pos, eci_vel))
 
 def print_moe(*, moe: np.ndarray) -> None:
     print(f"Eccentricity:    {moe[0]}")

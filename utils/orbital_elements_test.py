@@ -2,7 +2,10 @@
 
 import unittest
 import numpy as np
+from astropy.time import Time
 from .orbital_elements import *
+from .constants import *
+from .ephemerides import *
 
 class TestOrbitalElements(unittest.TestCase):
 
@@ -28,7 +31,7 @@ class TestOrbitalElements(unittest.TestCase):
         for i in range(0, 6):
             np.testing.assert_approx_equal(moe_got[i], moe_expected[i], significant=5)
 
-    def test_moe_to_pv(self):
+    def test_pv_from_moe(self):
         moe  = np.array([
             0.9,
             60000e3,
@@ -47,10 +50,29 @@ class TestOrbitalElements(unittest.TestCase):
             -3.67958e3
         ])
 
-        pv_got = moe_to_pv(moe=moe)
+        pv_got = pv_from_moe(moe=moe)
 
         for i in range(0, 6):
             np.testing.assert_approx_equal(pv_got[i], pv_expected[i], significant=5)
+
+
+    def test_pv_to_lunar_and_back(self):
+        t = Time("2022-04-17").unix
+
+        pv = np.array([
+            -6045e3,
+            -3490e3,
+            2500e3,
+            -3.457e3,
+            6.618e3,
+            2.533e3
+        ])
+
+        lunar_pv = pv_to_lunar_pv(pv=pv, t=t, moon_ephemeris=moon_ephemeris)
+        received = pv_from_lunar_pv(lunar_pv=lunar_pv, t=t, moon_ephemeris=moon_ephemeris)
+        
+        for i in range(0, 6):
+            np.testing.assert_approx_equal(pv[i], received[i], significant=5)
 
 if __name__ == '__main__':
     unittest.main()

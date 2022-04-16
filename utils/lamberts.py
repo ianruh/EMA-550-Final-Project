@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
-from .constants import mu_earth
+from .constants import CentralBody
 
 def unit_vector(vector):
     return vector / np.linalg.norm(vector)
@@ -10,7 +10,11 @@ def angle_between(v1, v2):
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
-def lamberts(*, r1_vec: np.ndarray, r2_vec: np.ndarray, dt: float):
+def lamberts(*,
+        r1_vec: np.ndarray,
+        r2_vec: np.ndarray,
+        dt: float,
+        central_body: CentralBody):
     """
     r1: [x, y, z] in meters
     r2: [x, y, z] in meters
@@ -26,10 +30,10 @@ def lamberts(*, r1_vec: np.ndarray, r2_vec: np.ndarray, dt: float):
     c = np.linalg.norm(r1_vec - r2_vec)
     s = (r1 + r2 + c)/2
 
-    dtp = (1/3)*np.sqrt(2/mu_earth)*(
+    dtp = (1/3)*np.sqrt(2/central_body.mu)*(
             s**(3/2) - np.sign(np.sin(dTheta)) * (s - c)**(3/2)
         )
-    dtm = np.sqrt(s**3 / (8*mu_earth))*(
+    dtm = np.sqrt(s**3 / (8*central_body.mu))*(
             np.pi - np.sqrt((s - c)/s) + np.sin(np.sqrt((s - c)/s))
         )
 
@@ -42,7 +46,7 @@ def lamberts(*, r1_vec: np.ndarray, r2_vec: np.ndarray, dt: float):
         beta = 2 * np.arcsin(np.sqrt((s - c)/(2*a)))
         if(dTheta > np.pi):
             beta = -1*beta
-        right = np.sqrt(a**3 / mu_earth) * (
+        right = np.sqrt(a**3 / central_body.mu) * (
                 alpha - beta - (np.sin(alpha) - np.sin(beta))
             )
         return right - left
@@ -64,8 +68,8 @@ def lamberts(*, r1_vec: np.ndarray, r2_vec: np.ndarray, dt: float):
     u2_vec = unit_vector(r2_vec)
     uc_vec = (r2_vec - r1_vec)/c
 
-    A = np.sqrt(mu_earth/(4*a))/np.tan(alpha/2)
-    B = np.sqrt(mu_earth/(4*a))/np.tan(beta/2)
+    A = np.sqrt(central_body.mu/(4*a))/np.tan(alpha/2)
+    B = np.sqrt(central_body.mu/(4*a))/np.tan(beta/2)
 
     v1_vec = (B + A)*uc_vec + (B - A)*u1_vec
     v2_vec = (B + A)*uc_vec - (B - A)*u2_vec
