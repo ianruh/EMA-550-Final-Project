@@ -113,7 +113,10 @@ def pv_to_perigee_radius(*,
         central_body: CentralBody):
     """Get the perigee radius from the pv vector"""
     moe = pv_to_moe(pv=pv, central_body=central_body)
-    return moe[1]*(1-moe[0])
+    if(moe[1] < 0):
+        return -1*moe[1]*(moe[0]-1)
+    else:
+        return moe[1]*(1-moe[0])
 
 def pv_to_apogee_radius(*,
         pv: np.ndarray,
@@ -121,6 +124,22 @@ def pv_to_apogee_radius(*,
     """Get the apogee radius from the pv vector"""
     moe = pv_to_moe(pv=pv, central_body=central_body)
     return moe[1]*(1+moe[0])
+
+def pv_to_perigee_passage(*,
+                         pv: np.ndarray,
+                         central_body: CentralBody):
+    
+    coe = pv_to_moe(pv=pv, central_body=central_body)
+    e = coe[0]
+    if e >= 1:
+        H = 2 * np.arctanh(np.sqrt((e-1)/(e+1)) * np.tan(coe[5]/2))
+        Mh = e * np.sinh(H) - H
+        tp = Mh / np.sqrt(central_body.mu / np.abs(coe[1])**3)
+    else:
+        E = 2 * np.arctan(np.sqrt((1-e)/(1+e)) * np.tan(coe[5]/2))
+        M = E - e*np.sin(E)
+        tp = M / np.sqrt(central_body.mu / coe[1]**3)
+    return tp
 
 def pv_to_lunar_pv(*,
         pv: np.ndarray,

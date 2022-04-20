@@ -59,7 +59,8 @@ class Ephemeris:
         times, states = self.get_traj(t0=t0, t1=t1)
         ax.plot3D(states[:,0], states[:,1], states[:,2], label=f"{label} Trajectory", color=pathColor)
         
-        ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
+        if(pointColor is not None):
+            ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
 
     def plot_lunar_in_eci(self, *,
             ax,
@@ -87,7 +88,8 @@ class Ephemeris:
 
         ax.plot3D(states[:,0], states[:,1], states[:,2], label=f"{label} Trajectory", color=pathColor)
         
-        ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
+        if(pointColor is not None):
+            ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
 
     def plot_eci_in_lunar(self, *,
             ax,
@@ -115,7 +117,8 @@ class Ephemeris:
 
         ax.plot3D(states[:,0], states[:,1], states[:,2], label=f"{label} Trajectory", color=pathColor)
         
-        ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
+        if(pointColor is not None):
+            ax.scatter3D(states[-1,0], states[-1,1], states[-1,2], label=label,color=pointColor);
 
     @classmethod
     def earth_to_lunar(cls, *,
